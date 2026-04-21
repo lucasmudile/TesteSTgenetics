@@ -1,0 +1,124 @@
+@page "/"
+@inject ApiService Api
+
+<PageTitle>Dashboard — Good Hamburger</PageTitle>
+
+<div class="page-header">
+    <h1>🍔 Dashboard</h1>
+    <p>Visão geral dos pedidos da lanchonete</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <span>A carregar dados…</span>
+    </div>
+}
+else
+{
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card accent">
+            <span class="stat-label">Total de Pedidos</span>
+            <span class="stat-value">@_orders.Count</span>
+            <span class="stat-sub">desde o início</span>
+        </div>
+        <div class="stat-card green">
+            <span class="stat-label">Faturamento Total</span>
+            <span class="stat-value">R$ @_totalRevenue.ToString("N2")</span>
+            <span class="stat-sub">com descontos aplicados</span>
+        </div>
+        <div class="stat-card blue">
+            <span class="stat-label">Descontos Dados</span>
+            <span class="stat-value">R$ @_totalDiscount.ToString("N2")</span>
+            <span class="stat-sub">economia para clientes</span>
+        </div>
+        <div class="stat-card yellow">
+            <span class="stat-label">Ticket Médio</span>
+            <span class="stat-value">R$ @_avgTicket.ToString("N2")</span>
+            <span class="stat-sub">por pedido</span>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h2 style="font-size:18px;font-weight:700;color:var(--text-primary)">Pedidos Recentes</h2>
+        <a href="orders/new" class="btn btn-primary btn-sm">➕ Novo Pedido</a>
+    </div>
+
+    @if (_orders.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <h3>Nenhum pedido ainda</h3>
+            <p>Crie o primeiro pedido para começar!</p>
+            <a href="orders/new" class="btn btn-primary">➕ Criar Pedido</a>
+        </div>
+    }
+    else
+    {
+        <div class="card-grid">
+            @foreach (var order in _orders.Take(6))
+            {
+                <div class="order-card">
+                    <div class="order-header">
+                        <div>
+                            <div class="order-id">…@order.Id.ToString()[^8..]</div>
+                            <div class="order-date">@order.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                        </div>
+                        @if (order.DiscountPercentage > 0)
+                        {
+                            <span class="discount-badge">-@order.DiscountPercentage%</span>
+                        }
+                    </div>
+                    <div class="order-items">
+                        @foreach (var item in order.Items)
+                        {
+                            <span class="item-chip">@GetEmoji(item.Type) @item.Name</span>
+                        }
+                    </div>
+                    <div class="order-pricing">
+                        <div class="pricing-row"><span>Subtotal</span><span>R$ @order.Subtotal.ToString("N2")</span></div>
+                        @if (order.DiscountAmount > 0)
+                        {
+                            <div class="pricing-row discount"><span>Desconto (@order.DiscountPercentage%)</span><span>-R$ @order.DiscountAmount.ToString("N2")</span></div>
+                        }
+                        <div class="pricing-row total"><span>Total</span><span>R$ @order.Total.ToString("N2")</span></div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (_orders.Count > 6)
+        {
+            <div style="text-align:center;margin-top:24px;">
+                <a href="orders" class="btn btn-secondary">Ver todos os @_orders.Count pedidos →</a>
+            </div>
+        }
+    }
+}
+
+@code {
+    private List<OrderModel> _orders = [];
+    private bool _loading = true;
+    private decimal _totalRevenue;
+    private decimal _totalDiscount;
+    private decimal _avgTicket;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _orders = await Api.GetOrdersAsync() ?? [];
+        _totalRevenue = _orders.Sum(o => o.Total);
+        _totalDiscount = _orders.Sum(o => o.DiscountAmount);
+        _avgTicket = _orders.Count > 0 ? _totalRevenue / _orders.Count : 0m;
+        _loading = false;
+    }
+
+    private static string GetEmoji(string type) => type switch
+    {
+        "Sandwich" => "🍔",
+        "Side" => "🍟",
+        _ => "🥤"
+    };
+}

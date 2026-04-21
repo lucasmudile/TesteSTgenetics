@@ -1,0 +1,21 @@
+## Build outputs
+bin/
+obj/
+publish/
+
+## VS / Rider
+.vs/
+.idea/
+*.user
+
+## Dotnet
+*.suo
+*.ncrunch*
+*.DotSettings.user
+
+## Blazor
+wwwroot/css/bootstrap/
+
+## OS
+.DS_Store
+Thumbs.db

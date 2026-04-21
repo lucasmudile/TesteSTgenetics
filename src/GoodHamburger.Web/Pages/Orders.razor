@@ -1,0 +1,164 @@
+@page "/orders"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Pedidos — Good Hamburger</PageTitle>
+
+<div class="page-header">
+    <h1>📦 Pedidos</h1>
+    <p>Gerencie todos os pedidos da lanchonete</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <span>A carregar pedidos…</span>
+    </div>
+}
+else
+{
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px;flex-wrap:wrap">
+        <span style="color:var(--text-secondary);font-size:14px">@_orders.Count pedido(s) encontrado(s)</span>
+        <a href="orders/new" class="btn btn-primary">➕ Novo Pedido</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMsg))
+    {
+        <div class="alert alert-success">✅ @_successMsg</div>
+    }
+
+    @if (_orders.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <h3>Nenhum pedido encontrado</h3>
+            <p>Clique em "Novo Pedido" para registrar o primeiro.</p>
+            <a href="orders/new" class="btn btn-primary">➕ Criar Pedido</a>
+        </div>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            @foreach (var order in _orders)
+            {
+                <div class="order-card">
+                    <div class="order-header">
+                        <div>
+                            <div class="order-id">ID: @order.Id.ToString()[..8]…</div>
+                            <div class="order-date">
+                                Criado: @order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                @if (order.UpdatedAt > order.CreatedAt.AddSeconds(1))
+                                {
+                                    <span style="color:var(--text-muted);margin-left:8px">(editado @order.UpdatedAt.ToLocalTime().ToString("HH:mm"))</span>
+                                }
+                            </div>
+                        </div>
+                        @if (order.DiscountPercentage > 0)
+                        {
+                            <span class="discount-badge">-@order.DiscountPercentage%</span>
+                        }
+                    </div>
+
+                    <div class="order-items">
+                        @foreach (var item in order.Items)
+                        {
+                            <span class="item-chip">@GetEmoji(item.Type) @item.Name</span>
+                        }
+                    </div>
+
+                    <div class="order-pricing">
+                        <div class="pricing-row"><span>Subtotal</span><span>R$ @order.Subtotal.ToString("N2")</span></div>
+                        @if (order.DiscountAmount > 0)
+                        {
+                            <div class="pricing-row discount">
+                                <span>Desconto (@order.DiscountPercentage%)</span>
+                                <span>-R$ @order.DiscountAmount.ToString("N2")</span>
+                            </div>
+                        }
+                        <div class="pricing-row total">
+                            <span>Total</span>
+                            <span>R$ @order.Total.ToString("N2")</span>
+                        </div>
+                    </div>
+
+                    <div class="order-actions">
+                        <a href="orders/@order.Id/edit" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(order)" disabled="@_deleting">
+                            🗑️ Remover
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+<!-- Delete confirmation modal -->
+@if (_orderToDelete is not null)
+{
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px">
+        <div class="card" style="max-width:420px;width:100%">
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:12px">Confirmar remoção</h3>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:24px">
+                Tem certeza que deseja remover o pedido <strong>…@_orderToDelete.Id.ToString()[^8..]</strong>?
+                Esta ação não pode ser desfeita.
+            </p>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button class="btn btn-secondary" @onclick="() => _orderToDelete = null">Cancelar</button>
+                <button class="btn btn-danger" @onclick="DeleteConfirmed" disabled="@_deleting">
+                    @(_deleting ? "A remover…" : "Sim, remover")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<OrderModel> _orders = [];
+    private bool _loading = true;
+    private bool _deleting = false;
+    private string? _successMsg;
+    private OrderModel? _orderToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        _loading = true;
+        _orders = await Api.GetOrdersAsync() ?? [];
+        _loading = false;
+    }
+
+    private void ConfirmDelete(OrderModel order)
+    {
+        _orderToDelete = order;
+        _successMsg = null;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (_orderToDelete is null) return;
+        _deleting = true;
+
+        var ok = await Api.DeleteOrderAsync(_orderToDelete.Id);
+        if (ok)
+        {
+            _successMsg = "Pedido removido com sucesso.";
+            _orders.Remove(_orderToDelete);
+        }
+
+        _orderToDelete = null;
+        _deleting = false;
+    }
+
+    private static string GetEmoji(string type) => type switch
+    {
+        "Sandwich" => "🍔",
+        "Side" => "🍟",
+        _ => "🥤"
+    };
+}

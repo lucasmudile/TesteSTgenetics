@@ -1,0 +1,85 @@
+@page "/menu"
+@inject ApiService Api
+
+<PageTitle>Cardápio — Good Hamburger</PageTitle>
+
+<div class="page-header">
+    <h1>📋 Cardápio</h1>
+    <p>Todos os itens disponíveis com preços atualizados</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <span>A carregar cardápio…</span>
+    </div>
+}
+else if (_menu.Count == 0)
+{
+    <div class="alert alert-error">⚠️ Não foi possível carregar o cardápio. Verifique se a API está em execução.</div>
+}
+else
+{
+    var sandwiches = _menu.Where(m => m.Type == "Sandwich").ToList();
+    var sides      = _menu.Where(m => m.Type == "Side").ToList();
+
+    <div class="menu-section-title">🍔 Sanduíches</div>
+    <div class="menu-grid">
+        @foreach (var item in sandwiches)
+        {
+            <div class="menu-item-card">
+                <span class="menu-item-emoji">🍔</span>
+                <span class="menu-item-name">@item.Name</span>
+                <span class="menu-item-price">R$ @item.Price.ToString("N2")</span>
+                <span class="menu-item-type">Sanduíche</span>
+            </div>
+        }
+    </div>
+
+    <div class="menu-section-title">🍟 Acompanhamentos</div>
+    <div class="menu-grid">
+        @foreach (var item in sides)
+        {
+            <div class="menu-item-card">
+                <span class="menu-item-emoji">@(item.Name.Contains("Batata") ? "🍟" : "🥤")</span>
+                <span class="menu-item-name">@item.Name</span>
+                <span class="menu-item-price">R$ @item.Price.ToString("N2")</span>
+                <span class="menu-item-type">Acompanhamento</span>
+            </div>
+        }
+    </div>
+
+    <!-- Discount rules -->
+    <div style="margin-top:40px">
+        <div class="menu-section-title">🏷️ Regras de Desconto</div>
+        <div class="card-grid">
+            <div class="card" style="border-color:rgba(34,197,94,0.3)">
+                <div style="font-size:24px;margin-bottom:8px">🍔🍟🥤</div>
+                <div style="font-size:20px;font-weight:800;color:var(--green);margin-bottom:6px">20% de desconto</div>
+                <div style="font-size:13px;color:var(--text-secondary)">Sanduíche + Batata Frita + Refrigerante</div>
+            </div>
+            <div class="card" style="border-color:rgba(59,130,246,0.3)">
+                <div style="font-size:24px;margin-bottom:8px">🍔🥤</div>
+                <div style="font-size:20px;font-weight:800;color:var(--blue);margin-bottom:6px">15% de desconto</div>
+                <div style="font-size:13px;color:var(--text-secondary)">Sanduíche + Refrigerante</div>
+            </div>
+            <div class="card" style="border-color:rgba(234,179,8,0.3)">
+                <div style="font-size:24px;margin-bottom:8px">🍔🍟</div>
+                <div style="font-size:20px;font-weight:800;color:var(--yellow);margin-bottom:6px">10% de desconto</div>
+                <div style="font-size:13px;color:var(--text-secondary)">Sanduíche + Batata Frita</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MenuItemModel> _menu = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _menu = await Api.GetMenuAsync() ?? [];
+        _loading = false;
+    }
+}

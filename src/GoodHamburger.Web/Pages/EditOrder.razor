@@ -1,0 +1,188 @@
+@page "/orders/{Id:guid}/edit"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Editar Pedido — Good Hamburger</PageTitle>
+
+<div class="page-header">
+    <h1>✏️ Editar Pedido</h1>
+    <p>Atualize os itens do pedido</p>
+</div>
+
+@if (_loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <span>A carregar pedido…</span>
+    </div>
+}
+else if (_notFound)
+{
+    <div class="alert alert-error">⚠️ Pedido não encontrado.</div>
+    <a href="orders" class="btn btn-secondary" style="margin-top:12px">← Voltar aos Pedidos</a>
+}
+else
+{
+    <div class="form-card">
+        <div style="margin-bottom:20px;padding:12px 16px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:12px;color:var(--text-muted)">
+            ID: @Id
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-error">⚠️ @_error</div>
+        }
+
+        <!-- Sandwiches -->
+        <div class="form-section-title">🍔 Escolha um sanduíche</div>
+        <div class="item-selector">
+            @foreach (var item in _sandwiches)
+            {
+                var isSelected = _selectedCodes.Contains(item.Code);
+                <label class="item-toggle @(isSelected ? "selected" : "")"
+                       @onclick="() => ToggleSandwich(item.Code)">
+                    <input type="checkbox" checked="@isSelected" @onclick:stopPropagation />
+                    <span class="menu-item-emoji" style="font-size:22px">🍔</span>
+                    <span class="toggle-info">
+                        <span class="toggle-name">@item.Name</span>
+                        <span class="toggle-type">Sanduíche</span>
+                    </span>
+                    <span class="toggle-price">R$ @item.Price.ToString("N2")</span>
+                </label>
+            }
+        </div>
+
+        <!-- Sides -->
+        <div class="form-section-title">🍟 Acompanhamentos (opcional)</div>
+        <div class="item-selector">
+            @foreach (var item in _sides)
+            {
+                var isSelected = _selectedCodes.Contains(item.Code);
+                var emoji = item.Name.Contains("Batata") ? "🍟" : "🥤";
+                <label class="item-toggle @(isSelected ? "selected" : "")"
+                       @onclick="() => ToggleSide(item.Code)">
+                    <input type="checkbox" checked="@isSelected" @onclick:stopPropagation />
+                    <span class="menu-item-emoji" style="font-size:22px">@emoji</span>
+                    <span class="toggle-info">
+                        <span class="toggle-name">@item.Name</span>
+                        <span class="toggle-type">Acompanhamento</span>
+                    </span>
+                    <span class="toggle-price">R$ @item.Price.ToString("N2")</span>
+                </label>
+            }
+        </div>
+
+        <!-- Preview -->
+        @if (_selectedCodes.Count > 0)
+        {
+            <div class="order-preview">
+                <div class="preview-title">📊 Resumo Atualizado</div>
+                @foreach (var code in _selectedCodes)
+                {
+                    var item = _allMenu.First(m => m.Code == code);
+                    <div class="preview-row">
+                        <span>@item.Name</span>
+                        <span>R$ @item.Price.ToString("N2")</span>
+                    </div>
+                }
+                <div class="preview-row" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;color:var(--text-secondary)">
+                    <span>Subtotal</span>
+                    <span>R$ @_subtotal.ToString("N2")</span>
+                </div>
+                @if (_discountPct > 0)
+                {
+                    <div class="preview-row discount">
+                        <span>Desconto (@_discountPct%)</span>
+                        <span>-R$ @_discountAmt.ToString("N2")</span>
+                    </div>
+                }
+                <div class="preview-row total">
+                    <span>Total</span>
+                    <span>R$ @_total.ToString("N2")</span>
+                </div>
+            </div>
+        }
+
+        <div style="display:flex;gap:12px">
+            <a href="orders" class="btn btn-secondary">← Cancelar</a>
+            <button class="btn btn-primary" @onclick="Submit" disabled="@(_saving || _selectedCodes.Count == 0)">
+                @(_saving ? "A guardar…" : "💾 Guardar Alterações")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private List<MenuItemModel> _allMenu = [];
+    private List<MenuItemModel> _sandwiches = [];
+    private List<MenuItemModel> _sides = [];
+    private HashSet<int> _selectedCodes = [];
+    private bool _loading = true;
+    private bool _notFound = false;
+    private bool _saving = false;
+    private string? _error;
+
+    private decimal _subtotal    => _selectedCodes.Sum(c => _allMenu.FirstOrDefault(m => m.Code == c)?.Price ?? 0m);
+    private bool _hasSandwich    => _selectedCodes.Any(c => _sandwiches.Any(s => s.Code == c));
+    private bool _hasFries       => _selectedCodes.Any(c => _sides.Any(s => s.Code == c && s.Name.Contains("Batata")));
+    private bool _hasSoda        => _selectedCodes.Any(c => _sides.Any(s => s.Code == c && s.Name.Contains("Refrigerante")));
+    private decimal _discountPct => (_hasSandwich, _hasFries, _hasSoda) switch {
+        (true, true, true)  => 20m,
+        (true, false, true) => 15m,
+        (true, true, false) => 10m,
+        _ => 0m
+    };
+    private decimal _discountAmt => Math.Round(_subtotal * _discountPct / 100m, 2);
+    private decimal _total       => Math.Round(_subtotal - _discountAmt, 2);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allMenu    = await Api.GetMenuAsync() ?? [];
+        _sandwiches = _allMenu.Where(m => m.Type == "Sandwich").ToList();
+        _sides      = _allMenu.Where(m => m.Type == "Side").ToList();
+
+        var order   = await Api.GetOrderAsync(Id);
+        if (order is null)
+        {
+            _notFound = true;
+        }
+        else
+        {
+            foreach (var item in order.Items)
+                _selectedCodes.Add(item.Code);
+        }
+        _loading = false;
+    }
+
+    private void ToggleSandwich(int code)
+    {
+        foreach (var s in _sandwiches) _selectedCodes.Remove(s.Code);
+        if (!_selectedCodes.Remove(code))
+            _selectedCodes.Add(code);
+        _error = null;
+    }
+
+    private void ToggleSide(int code)
+    {
+        if (!_selectedCodes.Remove(code))
+            _selectedCodes.Add(code);
+        _error = null;
+    }
+
+    private async Task Submit()
+    {
+        _error  = null;
+        _saving = true;
+        var request = new CreateOrderRequest { Items = [.. _selectedCodes] };
+        var result  = await Api.UpdateOrderAsync(Id, request);
+
+        if (result is not null)
+            Nav.NavigateTo("orders");
+        else
+            _error = "Não foi possível atualizar o pedido. Verifique os itens selecionados.";
+
+        _saving = false;
+    }
+}
