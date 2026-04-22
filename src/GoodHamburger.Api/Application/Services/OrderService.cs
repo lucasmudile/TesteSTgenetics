@@ -10,7 +10,7 @@ public class OrderService(IOrderRepository repository)
 {
     private readonly IOrderRepository _repository = repository;
 
-    // ── Mapping ─────────────────────────────────────────────────────────────
+    //Mapping
 
     private static OrderResponse MapToResponse(Order order) => new(
         order.Id,
@@ -24,12 +24,27 @@ public class OrderService(IOrderRepository repository)
         order.Total
     );
 
-    // ── Queries ─────────────────────────────────────────────────────────────
+    // Queries
 
     public async Task<IEnumerable<OrderResponse>> GetAllAsync()
     {
         var orders = await _repository.GetAllAsync();
         return orders.Select(MapToResponse);
+    }
+
+    public async Task<PagedResult<OrderResponse>> GetPagedAsync(OrderQuery query)
+    {
+        var (items, totalCount) = await _repository.GetPagedAsync(query);
+        var pageSize  = Math.Max(1, Math.Min(query.PageSize, 100));
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PagedResult<OrderResponse>(
+            items.Select(MapToResponse).ToList(),
+            totalCount,
+            query.Page,
+            pageSize,
+            Math.Max(1, totalPages)
+        );
     }
 
     public async Task<OrderResponse> GetByIdAsync(Guid id)
@@ -39,7 +54,7 @@ public class OrderService(IOrderRepository repository)
         return MapToResponse(order);
     }
 
-    // ── Commands ────────────────────────────────────────────────────────────
+    // Commands
 
     public async Task<OrderResponse> CreateAsync(CreateOrderRequest request)
     {
@@ -68,22 +83,22 @@ public class OrderService(IOrderRepository repository)
             throw new KeyNotFoundException($"Pedido com ID '{id}' não encontrado.");
     }
 
-    // ── Validation ──────────────────────────────────────────────────────────
+    // Validation
 
     /// <summary>
     /// Valida e resolve os códigos de itens enviados pelo cliente.
     /// Regras:
-    ///   • Ao menos um item deve ser informado.
-    ///   • Todos os códigos devem existir no cardápio.
-    ///   • Máximo de 1 sanduíche, 1 batata e 1 refrigerante.
-    ///   • Itens duplicados não são permitidos.
+    ///    Ao menos um item deve ser informado.
+    ///    Todos os códigos devem existir no cardápio.
+    ///    Máximo de 1 sanduíche, 1 batata e 1 refrigerante.
+    ///    Itens duplicados não são permitidos.
     /// </summary>
     private static List<MenuItem> ResolveAndValidateItems(List<MenuItemCode> codes)
     {
         if (codes is null || codes.Count == 0)
             throw new ArgumentException("O pedido deve conter ao menos um item.");
 
-        // Duplicates check
+        // Verificar duplicados
         var duplicates = codes.GroupBy(c => c).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count > 0)
         {
@@ -92,7 +107,7 @@ public class OrderService(IOrderRepository repository)
                 $"Itens duplicados não são permitidos: {string.Join(", ", names)}.");
         }
 
-        // Resolve against catalog
+        // Verifica o que não existe no cadarpio
         var items = new List<MenuItem>();
         foreach (var code in codes)
         {
@@ -101,7 +116,7 @@ public class OrderService(IOrderRepository repository)
             items.Add(item);
         }
 
-        // Quantity constraints
+        //Verifica a quantidade de itens
         var sandwiches = items.Where(i => i.IsSandwich).ToList();
         var fries      = items.Where(i => i.IsFries).ToList();
         var sodas      = items.Where(i => i.IsSoda).ToList();

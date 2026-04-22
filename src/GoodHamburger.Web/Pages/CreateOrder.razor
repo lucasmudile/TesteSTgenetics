@@ -29,16 +29,18 @@ else
         <div class="item-selector">
             @foreach (var item in _sandwiches)
             {
-                var isSelected = _selectedCodes.Contains(item.Code);
-                <label class="item-toggle @(isSelected ? "selected" : "")"
-                       @onclick="() => ToggleSandwich(item.Code)">
-                    <input type="checkbox" checked="@isSelected" @onclick:stopPropagation />
+                var capturedItem = item;
+                var isSelected = _selectedCodes.Contains(capturedItem.Code);
+                <label class="item-toggle @(isSelected ? "selected" : "")">
+                    <input type="checkbox"
+                           checked="@isSelected"
+                           @onchange="() => ToggleSandwich(capturedItem.Code)" />
                     <span class="menu-item-emoji" style="font-size:22px">🍔</span>
                     <span class="toggle-info">
-                        <span class="toggle-name">@item.Name</span>
+                        <span class="toggle-name">@capturedItem.Name</span>
                         <span class="toggle-type">Sanduíche</span>
                     </span>
-                    <span class="toggle-price">R$ @item.Price.ToString("N2")</span>
+                    <span class="toggle-price">R$ @capturedItem.Price.ToString("N2")</span>
                 </label>
             }
         </div>
@@ -48,22 +50,24 @@ else
         <div class="item-selector">
             @foreach (var item in _sides)
             {
-                var isSelected = _selectedCodes.Contains(item.Code);
-                var emoji = item.Name.Contains("Batata") ? "🍟" : "🥤";
-                <label class="item-toggle @(isSelected ? "selected" : "")"
-                       @onclick="() => ToggleSide(item.Code)">
-                    <input type="checkbox" checked="@isSelected" @onclick:stopPropagation />
+                var capturedItem = item;
+                var isSelected = _selectedCodes.Contains(capturedItem.Code);
+                var emoji = capturedItem.Name.Contains("Batata") ? "🍟" : "🥤";
+                <label class="item-toggle @(isSelected ? "selected" : "")">
+                    <input type="checkbox"
+                           checked="@isSelected"
+                           @onchange="() => ToggleSide(capturedItem.Code)" />
                     <span class="menu-item-emoji" style="font-size:22px">@emoji</span>
                     <span class="toggle-info">
-                        <span class="toggle-name">@item.Name</span>
+                        <span class="toggle-name">@capturedItem.Name</span>
                         <span class="toggle-type">Acompanhamento</span>
                     </span>
-                    <span class="toggle-price">R$ @item.Price.ToString("N2")</span>
+                    <span class="toggle-price">R$ @capturedItem.Price.ToString("N2")</span>
                 </label>
             }
         </div>
 
-        <!-- Preview -->
+        
         @if (_selectedCodes.Count > 0)
         {
             <div class="order-preview">
@@ -112,7 +116,7 @@ else
     private bool _saving = false;
     private string? _error;
 
-    // Computed
+    
     private decimal _subtotal    => _selectedCodes.Sum(c => _allMenu.FirstOrDefault(m => m.Code == c)?.Price ?? 0m);
     private bool _hasSandwich    => _selectedCodes.Any(c => _sandwiches.Any(s => s.Code == c));
     private bool _hasFries       => _selectedCodes.Any(c => _sides.Any(s => s.Code == c && s.Name.Contains("Batata")));
@@ -128,24 +132,39 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _allMenu     = await Api.GetMenuAsync() ?? [];
-        _sandwiches  = _allMenu.Where(m => m.Type == "Sandwich").ToList();
-        _sides       = _allMenu.Where(m => m.Type == "Side").ToList();
-        _loadingMenu = false;
+        try
+        {
+            _allMenu     = await Api.GetMenuAsync() ?? [];
+            _sandwiches  = _allMenu.Where(m => m.Type == "Sandwich").ToList();
+            _sides       = _allMenu.Where(m => m.Type == "Side").ToList();
+        }
+        catch
+        {
+            _error = "Não foi possível carregar o cardápio. Verifique se a API está em execução.";
+        }
+        finally
+        {
+            _loadingMenu = false;
+        }
     }
 
     private void ToggleSandwich(int code)
     {
-        // Only one sandwich allowed — replace
+
+        var alreadySelected = _selectedCodes.Contains(code);
+
         foreach (var s in _sandwiches) _selectedCodes.Remove(s.Code);
-        if (!_selectedCodes.Remove(code))
+
+        if (!alreadySelected)
             _selectedCodes.Add(code);
         _error = null;
     }
 
     private void ToggleSide(int code)
     {
-        if (!_selectedCodes.Remove(code))
+        if (_selectedCodes.Contains(code))
+            _selectedCodes.Remove(code);
+        else
             _selectedCodes.Add(code);
         _error = null;
     }

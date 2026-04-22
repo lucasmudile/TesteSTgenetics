@@ -1,10 +1,7 @@
-using GoodHamburger.Api.Domain.Enums;
-
 namespace GoodHamburger.Api.Domain.Entities;
 
 /// <summary>
 /// Representa um pedido completo. As regras de negócio de desconto
-/// ficam encapsuladas aqui para não vazar para outras camadas.
 /// </summary>
 public class Order
 {
@@ -15,7 +12,6 @@ public class Order
     private readonly List<MenuItem> _items = [];
     public IReadOnlyList<MenuItem> Items => _items.AsReadOnly();
 
-    // ── Computed ────────────────────────────────────────────────────────────
     public decimal Subtotal => _items.Sum(i => i.Price);
 
     public decimal DiscountPercentage => CalculateDiscountPercentage();
@@ -24,7 +20,6 @@ public class Order
 
     public decimal Total => Math.Round(Subtotal - DiscountAmount, 2);
 
-    // ── Factory ─────────────────────────────────────────────────────────────
     public static Order Create(IEnumerable<MenuItem> items)
     {
         var order = new Order();
@@ -41,9 +36,8 @@ public class Order
         UpdatedAt = DateTime.UtcNow;
     }
 
-    // ── Business Rule ────────────────────────────────────────────────────────
     /// <summary>
-    /// Regras de desconto (tabela de prioridade do mais vantajoso):
+    /// Regras de desconto
     ///   Sanduíche + batata + refrigerante → 20%
     ///   Sanduíche + refrigerante           → 15%
     ///   Sanduíche + batata                 → 10%

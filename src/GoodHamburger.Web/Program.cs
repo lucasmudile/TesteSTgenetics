@@ -7,12 +7,12 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// API base URL — ajustar se mudar as portas
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri("https://localhost:7000/")
 });
 
 builder.Services.AddScoped<ApiService>();
+builder.Services.AddSingleton<ThemeService>();
 
 await builder.Build().RunAsync();

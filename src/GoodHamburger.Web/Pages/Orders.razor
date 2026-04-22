@@ -6,9 +6,148 @@
 
 <div class="page-header">
     <h1>📦 Pedidos</h1>
-    <p>Gerencie todos os pedidos da lanchonete</p>
+    <p>Gerencie e filtre todos os pedidos da lanchonete</p>
 </div>
 
+@if (!string.IsNullOrEmpty(_successMsg))
+{
+    <div class="alert alert-success">✅ @_successMsg</div>
+}
+
+
+<div class="orders-toolbar">
+    <div class="toolbar-left">
+        <button class="btn-filter-toggle @(_showFilters ? "active" : "")" @onclick="ToggleFilters">
+            <span>🔍 Filtros</span>
+            @if (_query.HasActiveFilters)
+            {
+                <span class="filter-count-badge">@ActiveFilterCount</span>
+            }
+            <span class="filter-chevron @(_showFilters ? "open" : "")">▾</span>
+        </button>
+
+        @if (_query.HasActiveFilters)
+        {
+            <button class="btn-clear-filters" @onclick="ClearFilters">✕ Limpar filtros</button>
+        }
+    </div>
+
+    <div class="toolbar-right">
+        <div class="sort-group">
+            <select class="filter-select sort-select" @bind="_query.SortBy" @bind:after="ApplyFilters">
+                <option value="date">📅 Data</option>
+                <option value="total">💰 Valor</option>
+                <option value="discount">🏷️ Desconto</option>
+            </select>
+            <button class="btn-sort-dir" @onclick="ToggleSortDir" title="@(_query.SortDesc ? "Decrescente" : "Crescente")">
+                @(_query.SortDesc ? "↓" : "↑")
+            </button>
+        </div>
+        <a href="orders/new" class="btn btn-primary">➕ Novo Pedido</a>
+    </div>
+</div>
+
+
+@if (_showFilters)
+{
+    <div class="filter-panel">
+        <div class="filter-grid">
+            <!-- Pesquisa por ID -->
+            <div class="filter-field">
+                <label class="filter-label">🔎 Pesquisa por ID</label>
+                <input class="filter-input" type="text" placeholder="Digite parte do ID…"
+                       value="@_query.Search" @oninput="OnSearchInput" />
+            </div>
+
+            <!-- Intervalo de datas -->
+            <div class="filter-field">
+                <label class="filter-label">📅 Data de</label>
+                <input class="filter-input" type="date"
+                       @bind="_query.DateFrom" @bind:after="ApplyFilters" />
+            </div>
+
+            <div class="filter-field">
+                <label class="filter-label">📅 Data até</label>
+                <input class="filter-input" type="date"
+                       @bind="_query.DateTo" @bind:after="ApplyFilters" />
+            </div>
+
+            <!-- Intervalo de valor -->
+            <div class="filter-field">
+                <label class="filter-label">💰 Valor mín. (R$)</label>
+                <input class="filter-input" type="number" min="0" step="0.01" placeholder="0,00"
+                       @bind="_query.MinTotal" @bind:after="ApplyFilters" />
+            </div>
+
+            <div class="filter-field">
+                <label class="filter-label">💰 Valor máx. (R$)</label>
+                <input class="filter-input" type="number" min="0" step="0.01" placeholder="999,99"
+                       @bind="_query.MaxTotal" @bind:after="ApplyFilters" />
+            </div>
+
+            <!-- Desconto -->
+            <div class="filter-field">
+                <label class="filter-label">🏷️ Desconto</label>
+                <select class="filter-select" @bind="_discountFilter" @bind:after="OnDiscountFilterChanged">
+                    <option value="">Todos</option>
+                    <option value="true">Com desconto</option>
+                    <option value="false">Sem desconto</option>
+                </select>
+            </div>
+        </div>
+    </div>
+}
+
+
+@if (_query.HasActiveFilters)
+{
+    <div class="active-filters">
+        @if (!string.IsNullOrWhiteSpace(_query.Search))
+        {
+            <span class="filter-chip">
+                🔎 "@_query.Search"
+                <button @onclick="ClearSearchFilter">✕</button>
+            </span>
+        }
+        @if (_query.DateFrom.HasValue)
+        {
+            <span class="filter-chip">
+                📅 De @_query.DateFrom.Value.ToString("dd/MM/yyyy")
+                <button @onclick="ClearDateFromFilter">✕</button>
+            </span>
+        }
+        @if (_query.DateTo.HasValue)
+        {
+            <span class="filter-chip">
+                📅 Até @_query.DateTo.Value.ToString("dd/MM/yyyy")
+                <button @onclick="ClearDateToFilter">✕</button>
+            </span>
+        }
+        @if (_query.MinTotal.HasValue)
+        {
+            <span class="filter-chip">
+                💰 Mín R$ @_query.MinTotal.Value.ToString("N2")
+                <button @onclick="ClearMinTotalFilter">✕</button>
+            </span>
+        }
+        @if (_query.MaxTotal.HasValue)
+        {
+            <span class="filter-chip">
+                💰 Máx R$ @_query.MaxTotal.Value.ToString("N2")
+                <button @onclick="ClearMaxTotalFilter">✕</button>
+            </span>
+        }
+        @if (_query.HasDiscount.HasValue)
+        {
+            <span class="filter-chip">
+                🏷️ @(_query.HasDiscount.Value ? "Com desconto" : "Sem desconto")
+                <button @onclick="ClearDiscountFilter">✕</button>
+            </span>
+        }
+    </div>
+}
+
+<!-- Lista de pedidos -->
 @if (_loading)
 {
     <div class="loading-container">
@@ -16,85 +155,115 @@
         <span>A carregar pedidos…</span>
     </div>
 }
+else if (_result is null || _result.Items.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>@(_query.HasActiveFilters ? "Nenhum pedido encontrado com esses filtros" : "Nenhum pedido encontrado")</h3>
+        <p>@(_query.HasActiveFilters ? "Tente ajustar ou limpar os filtros." : "Clique em \"Novo Pedido\" para registrar o primeiro.")</p>
+        @if (!_query.HasActiveFilters)
+        {
+            <a href="orders/new" class="btn btn-primary">➕ Criar Pedido</a>
+        }
+        else
+        {
+            <button class="btn btn-secondary" @onclick="ClearFilters">✕ Limpar filtros</button>
+        }
+    </div>
+}
 else
 {
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px;flex-wrap:wrap">
-        <span style="color:var(--text-secondary);font-size:14px">@_orders.Count pedido(s) encontrado(s)</span>
-        <a href="orders/new" class="btn btn-primary">➕ Novo Pedido</a>
+    <div class="orders-meta">
+        <span>@_result.TotalCount pedido(s) encontrado(s)</span>
+        <span>Página @_result.Page de @_result.TotalPages</span>
     </div>
 
-    @if (!string.IsNullOrEmpty(_successMsg))
-    {
-        <div class="alert alert-success">✅ @_successMsg</div>
-    }
-
-    @if (_orders.Count == 0)
-    {
-        <div class="empty-state">
-            <div class="empty-icon">📦</div>
-            <h3>Nenhum pedido encontrado</h3>
-            <p>Clique em "Novo Pedido" para registrar o primeiro.</p>
-            <a href="orders/new" class="btn btn-primary">➕ Criar Pedido</a>
-        </div>
-    }
-    else
-    {
-        <div style="display:flex;flex-direction:column;gap:14px;">
-            @foreach (var order in _orders)
-            {
-                <div class="order-card">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">ID: @order.Id.ToString()[..8]…</div>
-                            <div class="order-date">
-                                Criado: @order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                                @if (order.UpdatedAt > order.CreatedAt.AddSeconds(1))
-                                {
-                                    <span style="color:var(--text-muted);margin-left:8px">(editado @order.UpdatedAt.ToLocalTime().ToString("HH:mm"))</span>
-                                }
-                            </div>
-                        </div>
-                        @if (order.DiscountPercentage > 0)
-                        {
-                            <span class="discount-badge">-@order.DiscountPercentage%</span>
-                        }
-                    </div>
-
-                    <div class="order-items">
-                        @foreach (var item in order.Items)
-                        {
-                            <span class="item-chip">@GetEmoji(item.Type) @item.Name</span>
-                        }
-                    </div>
-
-                    <div class="order-pricing">
-                        <div class="pricing-row"><span>Subtotal</span><span>R$ @order.Subtotal.ToString("N2")</span></div>
-                        @if (order.DiscountAmount > 0)
-                        {
-                            <div class="pricing-row discount">
-                                <span>Desconto (@order.DiscountPercentage%)</span>
-                                <span>-R$ @order.DiscountAmount.ToString("N2")</span>
-                            </div>
-                        }
-                        <div class="pricing-row total">
-                            <span>Total</span>
-                            <span>R$ @order.Total.ToString("N2")</span>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+        @foreach (var order in _result.Items)
+        {
+            <div class="order-card">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">ID: @order.Id.ToString()[..8]…</div>
+                        <div class="order-date">
+                            Criado: @order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            @if (order.UpdatedAt > order.CreatedAt.AddSeconds(1))
+                            {
+                                <span style="color:var(--text-muted);margin-left:8px">(editado @order.UpdatedAt.ToLocalTime().ToString("HH:mm"))</span>
+                            }
                         </div>
                     </div>
+                    @if (order.DiscountPercentage > 0)
+                    {
+                        <span class="discount-badge">-@order.DiscountPercentage%</span>
+                    }
+                </div>
 
-                    <div class="order-actions">
-                        <a href="orders/@order.Id/edit" class="btn btn-secondary btn-sm">✏️ Editar</a>
-                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(order)" disabled="@_deleting">
-                            🗑️ Remover
-                        </button>
+                <div class="order-items">
+                    @foreach (var item in order.Items)
+                    {
+                        <span class="item-chip">@GetEmoji(item.Type) @item.Name</span>
+                    }
+                </div>
+
+                <div class="order-pricing">
+                    <div class="pricing-row"><span>Subtotal</span><span>R$ @order.Subtotal.ToString("N2")</span></div>
+                    @if (order.DiscountAmount > 0)
+                    {
+                        <div class="pricing-row discount">
+                            <span>Desconto (@order.DiscountPercentage%)</span>
+                            <span>-R$ @order.DiscountAmount.ToString("N2")</span>
+                        </div>
+                    }
+                    <div class="pricing-row total">
+                        <span>Total</span>
+                        <span>R$ @order.Total.ToString("N2")</span>
                     </div>
                 </div>
-            }
+
+                <div class="order-actions">
+                    <a href="orders/@order.Id/edit" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                    <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(order)" disabled="@_deleting">
+                        🗑️ Remover
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Paginação -->
+    @if (_result.TotalPages > 1)
+    {
+        <div class="pagination">
+            <button class="page-btn" disabled="@(_result.Page <= 1)" @onclick="() => GoToPage(_result.Page - 1)">
+                ← Anterior
+            </button>
+
+            <div class="page-numbers">
+                @foreach (var p in GetPageNumbers())
+                {
+                    @if (p == -1)
+                    {
+                        <span class="page-ellipsis">…</span>
+                    }
+                    else
+                    {
+                        <button class="page-btn page-num @(p == _result.Page ? "active" : "")"
+                                @onclick="() => GoToPage(p)">
+                            @p
+                        </button>
+                    }
+                }
+            </div>
+
+            <button class="page-btn" disabled="@(_result.Page >= _result.TotalPages)" @onclick="() => GoToPage(_result.Page + 1)">
+                Próximo →
+            </button>
         </div>
     }
 }
 
-<!-- Delete confirmation modal -->
+
 @if (_orderToDelete is not null)
 {
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -115,23 +284,112 @@ else
 }
 
 @code {
-    private List<OrderModel> _orders = [];
-    private bool _loading = true;
-    private bool _deleting = false;
+    private PagedResultModel<OrderModel>? _result;
+    private OrderQueryModel _query = new();
+    private bool _loading   = true;
+    private bool _deleting  = false;
+    private bool _showFilters = false;
     private string? _successMsg;
     private OrderModel? _orderToDelete;
+    private string _discountFilter = "";
+    private System.Threading.CancellationTokenSource? _searchCts;
 
-    protected override async Task OnInitializedAsync()
+    private int ActiveFilterCount
     {
-        await LoadOrders();
+        get
+        {
+            int c = 0;
+            if (!string.IsNullOrWhiteSpace(_query.Search)) c++;
+            if (_query.DateFrom.HasValue) c++;
+            if (_query.DateTo.HasValue)   c++;
+            if (_query.MinTotal.HasValue) c++;
+            if (_query.MaxTotal.HasValue) c++;
+            if (_query.HasDiscount.HasValue) c++;
+            return c;
+        }
     }
+
+    protected override async Task OnInitializedAsync() => await LoadOrders();
 
     private async Task LoadOrders()
     {
         _loading = true;
-        _orders = await Api.GetOrdersAsync() ?? [];
-        _loading = false;
+        try   { _result = await Api.GetOrdersPagedAsync(_query) ?? new(); }
+        catch { _result = new(); }
+        finally { _loading = false; }
     }
+
+    private async Task ApplyFilters()
+    {
+        _query.Page = 1;
+        await LoadOrders();
+    }
+
+    // Debounce da pesquisa por texto
+    private async void OnSearchInput(ChangeEventArgs e)
+    {
+        _query.Search = e.Value?.ToString();
+        _searchCts?.Cancel();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(400, token);
+            if (!token.IsCancellationRequested)
+            {
+                _query.Page = 1;
+                await LoadOrders();
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task OnDiscountFilterChanged()
+    {
+        _query.HasDiscount = _discountFilter switch
+        {
+            "true"  => true,
+            "false" => false,
+            _       => null
+        };
+        await ApplyFilters();
+    }
+
+    private async Task ClearDiscountFilter()
+    {
+        _query.HasDiscount = null;
+        _discountFilter = "";
+        await ApplyFilters();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        _query.Page = page;
+        await LoadOrders();
+    }
+
+    private void ToggleFilters() => _showFilters = !_showFilters;
+
+    private async Task ToggleSortDir()
+    {
+        _query.SortDesc = !_query.SortDesc;
+        await ApplyFilters();
+    }
+
+    private async Task ClearFilters()
+    {
+        _query = new OrderQueryModel { SortBy = _query.SortBy, SortDesc = _query.SortDesc };
+        _discountFilter = "";
+        await ApplyFilters();
+    }
+
+    // Métodos para remover filtros individuais
+    private async Task ClearSearchFilter()   { _query.Search      = null;  await ApplyFilters(); }
+    private async Task ClearDateFromFilter() { _query.DateFrom    = null;  await ApplyFilters(); }
+    private async Task ClearDateToFilter()   { _query.DateTo      = null;  await ApplyFilters(); }
+    private async Task ClearMinTotalFilter() { _query.MinTotal    = null;  await ApplyFilters(); }
+    private async Task ClearMaxTotalFilter() { _query.MaxTotal    = null;  await ApplyFilters(); }
 
     private void ConfirmDelete(OrderModel order)
     {
@@ -143,22 +401,43 @@ else
     {
         if (_orderToDelete is null) return;
         _deleting = true;
-
         var ok = await Api.DeleteOrderAsync(_orderToDelete.Id);
         if (ok)
         {
             _successMsg = "Pedido removido com sucesso.";
-            _orders.Remove(_orderToDelete);
+            await LoadOrders();
         }
-
         _orderToDelete = null;
         _deleting = false;
+    }
+
+    // Gera a sequência de números de página com reticências 
+    private IEnumerable<int> GetPageNumbers()
+    {
+        if (_result is null) yield break;
+        int total   = _result.TotalPages;
+        int current = _result.Page;
+        bool lastWasEllipsis = false;
+
+        for (int i = 1; i <= total; i++)
+        {
+            if (i == 1 || i == total || Math.Abs(i - current) <= 1)
+            {
+                lastWasEllipsis = false;
+                yield return i;
+            }
+            else if (!lastWasEllipsis)
+            {
+                lastWasEllipsis = true;
+                yield return -1; 
+            }
+        }
     }
 
     private static string GetEmoji(string type) => type switch
     {
         "Sandwich" => "🍔",
-        "Side" => "🍟",
-        _ => "🥤"
+        "Side"     => "🍟",
+        _          => "🥤"
     };
 }

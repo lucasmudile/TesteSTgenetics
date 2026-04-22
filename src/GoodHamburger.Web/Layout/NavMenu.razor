@@ -1,4 +1,16 @@
-<nav class="sidebar">
+@inject NavigationManager Nav
+@inject ThemeService Theme
+@implements IDisposable
+
+
+<button class="menu-toggle" @onclick="ToggleMenu" aria-label="Abrir menu">
+    @(_open ? "✕" : "☰")
+</button>
+
+
+<div class="sidebar-overlay @(_open ? "open" : "")" @onclick="CloseMenu"></div>
+
+<nav class="sidebar @(_open ? "open" : "")">
     <div class="sidebar-brand">
         <span class="brand-icon">🍔</span>
         <span class="brand-name">Good Hamburger</span>
@@ -6,25 +18,25 @@
 
     <ul class="nav-links">
         <li>
-            <NavLink href="" Match="NavLinkMatch.All" class="nav-link">
+            <NavLink href="" Match="NavLinkMatch.All" class="nav-link" @onclick="CloseMenu">
                 <span class="nav-icon">🏠</span>
                 <span>Dashboard</span>
             </NavLink>
         </li>
         <li>
-            <NavLink href="menu" class="nav-link">
+            <NavLink href="menu" class="nav-link" @onclick="CloseMenu">
                 <span class="nav-icon">📋</span>
                 <span>Cardápio</span>
             </NavLink>
         </li>
         <li>
-            <NavLink href="orders" class="nav-link">
+            <NavLink href="orders" Match="NavLinkMatch.All" class="nav-link" @onclick="CloseMenu">
                 <span class="nav-icon">📦</span>
                 <span>Pedidos</span>
             </NavLink>
         </li>
         <li>
-            <NavLink href="orders/new" class="nav-link">
+            <NavLink href="orders/new" class="nav-link" @onclick="CloseMenu">
                 <span class="nav-icon">➕</span>
                 <span>Novo Pedido</span>
             </NavLink>
@@ -32,6 +44,44 @@
     </ul>
 
     <div class="sidebar-footer">
-        <span>Good Hamburger © 2025</span>
+        <div class="theme-toggle-wrap">
+            <span class="theme-label">🌙</span>
+            <button class="theme-toggle-btn @(Theme.IsLight ? "is-light" : "")"
+                    @onclick="ToggleTheme"
+                    aria-label="Alternar tema"
+                    title="@(Theme.IsLight ? "Mudar para tema escuro" : "Mudar para tema claro")">
+                <span class="theme-toggle-thumb"></span>
+            </button>
+            <span class="theme-label">☀️</span>
+        </div>
+        <span class="footer-copy">Good Hamburger © 2026</span>
     </div>
 </nav>
+
+@code {
+    private bool _open = false;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Theme.OnThemeChanged += OnThemeChanged;
+    }
+
+    private void ToggleMenu() => _open = !_open;
+    private void CloseMenu() => _open = false;
+    private void ToggleTheme() => Theme.Toggle();
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _open = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        Theme.OnThemeChanged -= OnThemeChanged;
+    }
+}

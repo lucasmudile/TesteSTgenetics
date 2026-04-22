@@ -1,9 +1,2 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/GoodHamburger.Api/GoodHamburger.Api.csproj" />
-    <Project Path="src/GoodHamburger.Web/GoodHamburger.Web.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/GoodHamburger.Tests/GoodHamburger.Tests.csproj" />
-  </Folder>
 </Solution>

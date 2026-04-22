@@ -50,7 +50,7 @@ else
         }
     </div>
 
-    <!-- Discount rules -->
+   
     <div style="margin-top:40px">
         <div class="menu-section-title">🏷️ Regras de Desconto</div>
         <div class="card-grid">
@@ -79,7 +79,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _menu = await Api.GetMenuAsync() ?? [];
-        _loading = false;
+        try
+        {
+            _menu = await Api.GetMenuAsync() ?? [];
+        }
+        catch {  }
+        finally
+        {
+            _loading = false;
+        }
     }
 }

@@ -20,6 +20,28 @@ public class OrdersController(OrderService orderService) : ControllerBase
         return Ok(orders);
     }
 
+    /// <summary>
+    /// Lista pedidos com filtros e paginação.
+    /// </summary>
+    [HttpGet("paged")]
+    [ProducesResponseType(typeof(PagedResult<OrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] string?   search      = null,
+        [FromQuery] decimal?  minTotal    = null,
+        [FromQuery] decimal?  maxTotal    = null,
+        [FromQuery] bool?     hasDiscount = null,
+        [FromQuery] DateTime? dateFrom    = null,
+        [FromQuery] DateTime? dateTo      = null,
+        [FromQuery] string    sortBy      = "date",
+        [FromQuery] bool      sortDesc    = true,
+        [FromQuery] int       page        = 1,
+        [FromQuery] int       pageSize    = 10)
+    {
+        var query  = new OrderQuery(search, minTotal, maxTotal, hasDiscount, dateFrom, dateTo, sortBy, sortDesc, page, pageSize);
+        var result = await _orderService.GetPagedAsync(query);
+        return Ok(result);
+    }
+
     /// <summary>Consulta um pedido pelo ID</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]

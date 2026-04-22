@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@inject ThemeService Theme
+@inject IJSRuntime JS
+@implements IDisposable
 
 <div class="layout">
     <NavMenu />
@@ -8,3 +11,37 @@
         </div>
     </main>
 </div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "gh-theme");
+            var isLight = saved == "light";
+            Theme.SetLight(isLight);
+            await ApplyTheme();
+
+            Theme.OnThemeChanged += OnThemeChanged;
+        }
+    }
+
+    private void OnThemeChanged()
+    {
+        _ = ApplyTheme();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyTheme()
+    {
+        var cls = Theme.IsLight ? "light" : "";
+        await JS.InvokeVoidAsync("eval",
+            $"document.body.className = '{cls}';" +
+            $"localStorage.setItem('gh-theme', '{(Theme.IsLight ? "light" : "dark")}');");
+    }
+
+    public void Dispose()
+    {
+        Theme.OnThemeChanged -= OnThemeChanged;
+    }
+}

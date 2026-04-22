@@ -7,12 +7,14 @@
     <meta name="description" content="Sistema de pedidos da lanchonete Good Hamburger — gerencie o cardápio e pedidos em tempo real." />
     <title>Good Hamburger — Sistema de Pedidos</title>
     <base href="/" />
-    <link rel="preload" id="webassembly" />
-    <!-- Google Fonts carregadas via CSS -->
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- App Styles -->
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
     <link href="GoodHamburger.Web.styles.css" rel="stylesheet" />
-    <script type="importmap"></script>
+    <link rel="icon" type="image/png" href="favicon.png" />
 </head>
 
 <body>
@@ -30,7 +32,16 @@
         <a href="." style="color:white;font-weight:700;margin-left:8px">Recarregar</a>
         <span class="dismiss" style="float:right;cursor:pointer">✕</span>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        // Aplica o tema antes do Blazor renderizar para evitar flash
+        (function () {
+            var t = localStorage.getItem('gh-theme');
+            if (t === 'light') document.body.className = 'light';
+        })();
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
 </html>
+
+

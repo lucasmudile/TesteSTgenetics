@@ -1,46 +1,16 @@
 using FluentAssertions;
 using GoodHamburger.Api.Application.DTOs;
-using GoodHamburger.Api.Application.Interfaces;
 using GoodHamburger.Api.Application.Services;
-using GoodHamburger.Api.Domain.Entities;
 using GoodHamburger.Api.Domain.Enums;
 
 namespace GoodHamburger.Tests;
 
-// ── Fake Repository ──────────────────────────────────────────────────────────
+
 
 /// <summary>
-/// Repositório em memória para uso nos testes, sem concorrência e totalmente
-/// controlado. Evita dependência de infraestrutura real.
+/// Service para os testes.
 /// </summary>
-public class FakeOrderRepository : IOrderRepository
-{
-    private readonly Dictionary<Guid, Order> _store = new();
-
-    public Task<IEnumerable<Order>> GetAllAsync() =>
-        Task.FromResult<IEnumerable<Order>>(_store.Values.ToList());
-
-    public Task<Order?> GetByIdAsync(Guid id) =>
-        Task.FromResult(_store.TryGetValue(id, out var o) ? o : null);
-
-    public Task<Order> CreateAsync(Order order)
-    {
-        _store[order.Id] = order;
-        return Task.FromResult(order);
-    }
-
-    public Task<Order> UpdateAsync(Order order)
-    {
-        _store[order.Id] = order;
-        return Task.FromResult(order);
-    }
-
-    public Task<bool> DeleteAsync(Guid id) =>
-        Task.FromResult(_store.Remove(id));
-}
-
-// ── Tests ────────────────────────────────────────────────────────────────────
-
+/// 
 public class OrderServiceTests
 {
     private readonly OrderService _sut;
@@ -50,12 +20,12 @@ public class OrderServiceTests
         _sut = new OrderService(new FakeOrderRepository());
     }
 
-    // ─── Discount Rules ────────────────────────────────────────────────────
+   
 
     [Fact]
     public async Task Create_SandwichFriesSoda_ShouldApply20PercentDiscount()
     {
-        // Arrange: X Burger (5) + Batata (2) + Refrigerante (2.5) = 9.5
+        // Arrange
         var request = new CreateOrderRequest([MenuItemCode.XBurger, MenuItemCode.Fries, MenuItemCode.Soda]);
 
         // Act
@@ -71,7 +41,7 @@ public class OrderServiceTests
     [Fact]
     public async Task Create_SandwichSoda_ShouldApply15PercentDiscount()
     {
-        // Arrange: X Bacon (7) + Refrigerante (2.5) = 9.5
+        // Arrange:
         var request = new CreateOrderRequest([MenuItemCode.XBacon, MenuItemCode.Soda]);
 
         // Act
@@ -80,7 +50,7 @@ public class OrderServiceTests
         // Assert
         result.DiscountPercentage.Should().Be(15m);
         result.Subtotal.Should().Be(9.50m);
-        // Math.Round com MidpointRounding.ToEven (padrão .NET): 1.425 → 1.42
+       
         result.DiscountAmount.Should().Be(1.42m);
         result.Total.Should().Be(8.08m);
     }
@@ -88,7 +58,7 @@ public class OrderServiceTests
     [Fact]
     public async Task Create_SandwichFries_ShouldApply10PercentDiscount()
     {
-        // Arrange: X Egg (4.5) + Batata (2) = 6.5
+        // Arrange:
         var request = new CreateOrderRequest([MenuItemCode.XEgg, MenuItemCode.Fries]);
 
         // Act
@@ -104,7 +74,7 @@ public class OrderServiceTests
     [Fact]
     public async Task Create_SandwichOnly_ShouldApplyNoDiscount()
     {
-        // Arrange: X Burger (5) = 5
+        // Arrange:
         var request = new CreateOrderRequest([MenuItemCode.XBurger]);
 
         // Act
@@ -130,7 +100,7 @@ public class OrderServiceTests
         result.Total.Should().Be(2.00m);
     }
 
-    // ─── Validation Rules ──────────────────────────────────────────────────
+    
 
     [Fact]
     public async Task Create_DuplicateSandwich_ShouldThrowArgumentException()
@@ -149,7 +119,7 @@ public class OrderServiceTests
     [Fact]
     public async Task Create_TwoSandwichTypes_ShouldThrowArgumentException()
     {
-        // Arrange: dois sanduíches diferentes
+        // Arrange:
         var request = new CreateOrderRequest([MenuItemCode.XBurger, MenuItemCode.XEgg]);
 
         // Act
@@ -187,7 +157,7 @@ public class OrderServiceTests
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
-    // ─── CRUD Operations ───────────────────────────────────────────────────
+
 
     [Fact]
     public async Task GetAll_AfterCreate_ShouldReturnCreatedOrder()
@@ -230,10 +200,10 @@ public class OrderServiceTests
     [Fact]
     public async Task Update_ExistingOrder_ShouldRecalculateDiscount()
     {
-        // Arrange: criar sem desconto
+        // Arrange:
         var created = await _sut.CreateAsync(new CreateOrderRequest([MenuItemCode.XBurger]));
 
-        // Act: atualizar para combo completo
+        // Act:
         var updateRequest = new UpdateOrderRequest([MenuItemCode.XBurger, MenuItemCode.Fries, MenuItemCode.Soda]);
         var updated = await _sut.UpdateAsync(created.Id, updateRequest);
 

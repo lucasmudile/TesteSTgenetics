@@ -15,6 +15,10 @@
         <span>A carregar dados…</span>
     </div>
 }
+else if (_apiError is not null)
+{
+    <div class="alert alert-error">⚠️ @_apiError</div>
+}
 else
 {
     <!-- Stats -->
@@ -102,17 +106,28 @@ else
 @code {
     private List<OrderModel> _orders = [];
     private bool _loading = true;
+    private string? _apiError;
     private decimal _totalRevenue;
     private decimal _totalDiscount;
     private decimal _avgTicket;
 
     protected override async Task OnInitializedAsync()
     {
-        _orders = await Api.GetOrdersAsync() ?? [];
-        _totalRevenue = _orders.Sum(o => o.Total);
-        _totalDiscount = _orders.Sum(o => o.DiscountAmount);
-        _avgTicket = _orders.Count > 0 ? _totalRevenue / _orders.Count : 0m;
-        _loading = false;
+        try
+        {
+            _orders = await Api.GetOrdersAsync() ?? [];
+            _totalRevenue = _orders.Sum(o => o.Total);
+            _totalDiscount = _orders.Sum(o => o.DiscountAmount);
+            _avgTicket = _orders.Count > 0 ? _totalRevenue / _orders.Count : 0m;
+        }
+        catch
+        {
+            _apiError = "Não foi possível conectar à API. Certifique-se de que o servidor está em execução.";
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private static string GetEmoji(string type) => type switch

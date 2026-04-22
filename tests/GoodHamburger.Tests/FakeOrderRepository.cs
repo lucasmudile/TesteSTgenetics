@@ -1,53 +1,49 @@
-using System.Collections.Concurrent;
 using GoodHamburger.Api.Application.DTOs;
 using GoodHamburger.Api.Application.Interfaces;
 using GoodHamburger.Api.Domain.Entities;
 
-namespace GoodHamburger.Api.Infrastructure.Repositories;
+namespace GoodHamburger.Tests;
+
 
 /// <summary>
-/// Repositório em memória. Ideal para demonstração sem BD externo.
-/// Se for para produção, substituir por EF Core + SQL Server.
+/// Repositório em memória para os testes.
 /// </summary>
-public sealed class InMemoryOrderRepository : IOrderRepository
+public class FakeOrderRepository : IOrderRepository
 {
-    private readonly ConcurrentDictionary<Guid, Order> _store = new();
+    private readonly Dictionary<Guid, Order> _store = new();
+
+    
+    public void Seed(params Order[] orders)
+    {
+        foreach (var o in orders) _store[o.Id] = o;
+    }
 
     public Task<IEnumerable<Order>> GetAllAsync() =>
-        Task.FromResult<IEnumerable<Order>>(_store.Values.OrderByDescending(o => o.CreatedAt));
+        Task.FromResult<IEnumerable<Order>>(_store.Values.ToList());
 
     public Task<(List<Order> Items, int TotalCount)> GetPagedAsync(OrderQuery q)
     {
         var query = _store.Values.AsQueryable();
 
-  
-
-        // Pesquisa por ID parcial
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var term = q.Search.Trim().ToLowerInvariant();
             query = query.Where(o => o.Id.ToString().ToLowerInvariant().Contains(term));
         }
 
-        // Intervalo de valor total
-        if (q.MinTotal.HasValue)
-            query = query.Where(o => o.Total >= q.MinTotal.Value);
-        if (q.MaxTotal.HasValue)
-            query = query.Where(o => o.Total <= q.MaxTotal.Value);
+        if (q.MinTotal.HasValue)    query = query.Where(o => o.Total >= q.MinTotal.Value);
+        if (q.MaxTotal.HasValue)    query = query.Where(o => o.Total <= q.MaxTotal.Value);
 
-        // Filtro de desconto
         if (q.HasDiscount.HasValue)
             query = q.HasDiscount.Value
                 ? query.Where(o => o.DiscountPercentage > 0)
                 : query.Where(o => o.DiscountPercentage == 0);
 
-        // Intervalo de datas
         if (q.DateFrom.HasValue)
             query = query.Where(o => o.CreatedAt >= q.DateFrom.Value.ToUniversalTime());
         if (q.DateTo.HasValue)
             query = query.Where(o => o.CreatedAt <= q.DateTo.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
 
-        // Ordenação
         query = (q.SortBy?.ToLower(), q.SortDesc) switch
         {
             ("total",    true)  => query.OrderByDescending(o => o.Total),
@@ -59,17 +55,15 @@ public sealed class InMemoryOrderRepository : IOrderRepository
         };
 
         var totalCount = query.Count();
-
-        // Paginação
-        var pageSize = Math.Max(1, Math.Min(q.PageSize, 100));
-        var page     = Math.Max(1, q.Page);
-        var items    = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var pageSize   = Math.Max(1, Math.Min(q.PageSize, 100));
+        var page       = Math.Max(1, q.Page);
+        var items      = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
         return Task.FromResult((items, totalCount));
     }
 
     public Task<Order?> GetByIdAsync(Guid id) =>
-        Task.FromResult(_store.TryGetValue(id, out var order) ? order : null);
+        Task.FromResult(_store.TryGetValue(id, out var o) ? o : null);
 
     public Task<Order> CreateAsync(Order order)
     {
@@ -84,5 +78,5 @@ public sealed class InMemoryOrderRepository : IOrderRepository
     }
 
     public Task<bool> DeleteAsync(Guid id) =>
-        Task.FromResult(_store.TryRemove(id, out _));
+        Task.FromResult(_store.Remove(id));
 }

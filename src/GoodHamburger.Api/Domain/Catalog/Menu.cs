@@ -4,7 +4,7 @@ using GoodHamburger.Api.Domain.Enums;
 namespace GoodHamburger.Api.Domain.Catalog;
 
 /// <summary>
-/// Cardápio imutável da lanchonete. Fonte única da verdade de preços/nomes.
+/// Cardápio da lanchonete. Fonte de preços/nomes.
 /// </summary>
 public static class Menu
 {

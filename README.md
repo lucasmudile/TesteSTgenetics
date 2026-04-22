@@ -1,13 +1,16 @@
-# 🍔 Good Hamburger — Sistema de Pedidos
+# Desafio Técnico — Desenvolvedor C# - STgenetics
 
-Sistema completo de gestão de pedidos para lanchonete, desenvolvido como demonstração de **arquitetura limpa** em ASP.NET Core + Blazor WebAssembly.
+## 🍔 Good Hamburger — Sistema de Pedidos
+
+Sistema completo de gestão de pedidos para lanchonete, desenvolvido como demonstração de **arquitetura limpa** em ASP.NET Core + Blazor, este projeto
+foi desenvolvido como teste para fazer parte da equipa de desenvolvedores da empresa STgenetics.
 
 ---
 
 ## 🚀 Como Executar
 
 ### Pré-requisitos
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ### 1. Clonar o repositório
 ```bash
@@ -64,6 +67,7 @@ dotnet test tests/GoodHamburger.Tests
 |---|---|---|
 | `GET` | `/api/menu` | Retorna o cardápio completo |
 | `GET` | `/api/orders` | Lista todos os pedidos |
+| `GET` | `/api/orders/paged` | Lista os pedidos com paginação e filtros |
 | `POST` | `/api/orders` | Cria um novo pedido |
 | `GET` | `/api/orders/{id}` | Consulta pedido por ID |
 | `PUT` | `/api/orders/{id}` | Atualiza itens de um pedido |
@@ -106,7 +110,7 @@ Códigos: `1=XBurger`, `2=XEgg`, `3=XBacon`, `4=BatataFrita`, `5=Refrigerante`
 ```
 GoodHamburger/
 ├── src/
-│   ├── GoodHamburger.Api/          ← API REST (ASP.NET Core 10)
+│   ├── GoodHamburger.Api/          ← API REST (ASP.NET Core 8)
 │   │   ├── Domain/
 │   │   │   ├── Entities/           ← Order, MenuItem (rich domain)
 │   │   │   ├── Enums/              ← MenuItemType, MenuItemCode
@@ -118,12 +122,12 @@ GoodHamburger/
 │   │   ├── Infrastructure/
 │   │   │   └── Repositories/       ← InMemoryOrderRepository
 │   │   └── Controllers/            ← OrdersController, MenuController
-│   └── GoodHamburger.Web/          ← Frontend Blazor WASM
+│   └── GoodHamburger.Web/          ← Frontend Blazor
 │       ├── Pages/                  ← Home, MenuPage, Orders, Create, Edit
 │       ├── Services/               ← ApiService (HttpClient)
 │       └── Models/                 ← DTOs do frontend
 └── tests/
-    └── GoodHamburger.Tests/        ← xUnit + FluentAssertions (15 testes)
+    └── GoodHamburger.Tests/        ← xUnit + FluentAssertions
 ```
 
 ### Decisões de Arquitetura
@@ -135,12 +139,12 @@ O cálculo de desconto fica encapsulado em `Order.CalculateDiscountPercentage()`
 Como os preços não mudam durante a execução, o cardápio é um objeto estático imutável. Evita um repositório de cardápio desnecessário. Em produção, seria uma tabela de BD com cache.
 
 **3. Repositório In-Memory com `ConcurrentDictionary`**  
-Thread-safe sem dependências externas. O padrão Repository garante que trocar para EF Core + PostgreSQL é uma mudança de uma única classe.
+Thread-safe sem dependências externas. O padrão Repository garante que trocar para EF Core + SQL Server é uma mudança de uma única classe.
 
 **4. DTOs como `record`**  
 Os DTOs de resposta são imutáveis por defeito. Separam completamente o contrato HTTP do domínio.
 
-**5. Frontend Blazor WASM**  
+**5. Frontend Blazor**  
 Corre inteiramente no browser. O `ApiService` é o único ponto de contacto com a API. O preview de desconto no formulário recalcula os mesmos valores que a API calcularia, dando feedback imediato ao utilizador.
 
 **6. Validação de erros**  
@@ -150,10 +154,9 @@ Corre inteiramente no browser. O `ApiService` é o único ponto de contacto com 
 - Todas as respostas de erro usam `ProblemDetails` (RFC 7807)
 
 ### O que ficou de fora (e porquê)
-- **Base de dados persistente**: Optei por in-memory para zero dependências externas. Em produção: EF Core + PostgreSQL.
-- **Autenticação/JWT**: Fora do escopo do teste.
-- **Docker**: Adicionaria um `docker-compose.yml` em produção.
-- **Testes de integração**: O `public partial class Program` está preparado para adicionar WebApplicationFactory nos testes.
+- **Base de dados persistente**: Optei por in-memory para zero dependências externas e por ser um teste. ,Em produção: EF Core + SQL Server e a estrutura do projeto já está prota caso queira usar o EF.
+- **Autenticação/JWT**: Fora do escopo do teste, não vi necessidade de utilizar pós seria aumentar complexidade uma vez que não temos utilizador no sistema e o teste não menciona ter.
+- **Docker**: Não vi necessidade em usar docker para este projeto.
 
 ---
 
