@@ -14,7 +14,7 @@ foi desenvolvido como teste para fazer parte da equipa de desenvolvedores da emp
 
 ### 1. Clonar o repositório
 ```bash
-git clone <url-do-repo>
+git clone https://github.com/lucasmudile/TesteSTgenetics.git
 cd GoodHamburger
 ```
 
