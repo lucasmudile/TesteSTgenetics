@@ -40,10 +40,10 @@ dotnet test tests/GoodHamburger.Tests
 
 ---
 
-## 🚀 Como Executar segunda opção
+## 🚀 Como Executar o projeto segunda opção
 
-  ### 1. Clonar o repositório
 ```bash
+ Clonar o repositório
  git clone https://github.com/lucasmudile/TesteSTgenetics.git
  Abrir a pasta TesteSTgenetic, abrir o ficheiro GoodHamburger.sln com o visual studio.
  Clicar com o botão direito do mouse por cima da solution (GoodHamburger)
