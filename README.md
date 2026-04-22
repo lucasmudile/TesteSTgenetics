@@ -15,7 +15,7 @@ foi desenvolvido como teste para fazer parte da equipa de desenvolvedores da emp
 ### 1. Clonar o repositório
 ```bash
 git clone https://github.com/lucasmudile/TesteSTgenetics.git
-cd GoodHamburger
+cd TesteSTgenetics
 ```
 
 ### 2. Iniciar a API (terminal 1)
