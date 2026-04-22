@@ -40,6 +40,20 @@ dotnet test tests/GoodHamburger.Tests
 
 ---
 
+## 🚀 Como Executar segunda opção
+
+  ### 1. Clonar o repositório
+```bash
+ git clone https://github.com/lucasmudile/TesteSTgenetics.git
+ Abrir a pasta TesteSTgenetic, abrir o ficheiro GoodHamburger.sln com o visual studio.
+ Clicar com o botão direito do mouse por cima da solution (GoodHamburger)
+ Clicar na opção Configure Startup Projects
+ Selecionar a opção Multiple startup projects
+ Na coluna Action escolher a opção em Start para GoodHamburger.Api e  GoodHamburger.Web
+ Clicar no botão Aplicar e depois Ok
+ Agora é só clicar na opção Start.
+```
+
 ## 📋 Cardápio
 
 | Item | Preço | Categoria |
